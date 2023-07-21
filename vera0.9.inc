@@ -180,18 +180,25 @@ AFLOW_BIT		= %00001000
 ; USES:		A register
 ; **************************************************************************
 .macro VERA_GOXY xc, yc, abs
-	.if abs = 0
+	.ifnblank abs
+		.if abs = 0
+			lda	#(yc+$B0)
+			sta	VERA_ADDR_M
+			lda	#(xc<<1)
+			sta	VERA_ADDR_L
+		.else
+			lda	yc
+			clc
+			adc	#$B0
+			sta	VERA_ADDR_M
+			lda	xc
+			asl
+			sta	VERA_ADDR_L
+		.endif
+	.else
 		lda	#(yc+$B0)
 		sta	VERA_ADDR_M
 		lda	#(xc<<1)
-		sta	VERA_ADDR_L
-	.else
-		lda	yc
-		clc
-		adc	#$B0
-		sta	VERA_ADDR_M
-		lda	xc
-		asl
 		sta	VERA_ADDR_L
 	.endif
 .endmacro
