@@ -1,5 +1,4 @@
-# cx16fm
-Commander X16 File Manager
+# Commander X16 File Manager
 
 The 8-bit guy a.k.a David Murray requested a Norton Commander style file manager for the Commander X16.
 As I have already created a mockup of the Norton-/Midnight Commander for the [VTUI library](https://github.com/jimmydansbo/vtuilib/), I thought that this was a task I could start.
