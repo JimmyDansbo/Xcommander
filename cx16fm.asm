@@ -75,6 +75,8 @@ strlen:
 strrev:
 	jsr	strlen		; Get length of string
 	bcs	@end		; If longer than 256 bytes, it's an error
+	cpy	#2		; No reversal if length<2
+	bcc	@end
 	dey
 @loop:	lda	(TMP_PTR0),y	; Read from end of string
 	pha			
