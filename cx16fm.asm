@@ -3,10 +3,9 @@
 .segment "ONCE"
 .segment "CODE"
 
-	jmp	main
-
 .include "cx16.inc"
 .include "vera0.9.inc"
+.include "vtuilib-ca65.inc"
 .include "video.inc"
 .include "file.inc"
 
@@ -23,22 +22,24 @@ main:
 	jsr	clrscr
 
 	GOTOXY #0, #0
-	ldy	scrheight
-	lda	scrwidth
+	lda	scrwidth	; Load screen width and half it
 	lsr
+	sta	r1l
+	lda	scrheight
+	sta	r2l
+	jsr	combinecolors
 	tax
-	jsr	box
+	lda	#2
+	jsr	vtui_border
 
 	lda	scrwidth
 	lsr
-	tay
-	ldx	#0
+	ldy	#0
 	GOTOXY
-	ldy	scrheight
-	lda	scrwidth
-	lsr
+	jsr	combinecolors
 	tax
-	jsr	box
+	lda	#2
+	jsr	vtui_border
 
 	jsr	CHRIN
 	jsr	CHRIN
@@ -95,12 +96,12 @@ strrev:
 ; Initialize global variables to sane default values
 ;******************************************************************************
 initvars:
-	lda	#PET_BLUE
+	lda	#BLUE
 	sta	bgcolor
-	lda	#PET_WHITE
+	lda	#WHITE
 	sta	fgcolor
-	lda	#PET_CYAN
+	lda	#CYAN
 	sta	hilightbg
-	lda	#PET_BLACK
+	lda	#BLACK
 	sta	hilightfg
 	rts
