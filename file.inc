@@ -1,4 +1,6 @@
 .ifndef FILE_INC
 FILE_INC=1
+	jmp	FILE_INC_END
 
+FILE_INC_END:
 .endif
