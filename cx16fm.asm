@@ -18,32 +18,26 @@
 ;******************************************************************************
 main:
 	jsr	initvars
-	GETSCREENMODE
+	jsr	getscreenmode
 	jsr	clrscr
 
-	GOTOXY #0, #0
-	lda	scrwidth	; Load screen width and half it
-	lsr
-	sta	r1l
-	lda	scrheight
-	sta	r2l
-	jsr	combinecolors
-	tax
-	lda	#2
-	jsr	vtui_border
+	jsr	drawboxs
 
-	lda	scrwidth
-	lsr
-	ldy	#0
-	GOTOXY
-	jsr	combinecolors
-	tax
-	lda	#2
-	jsr	vtui_border
-
-	jsr	CHRIN
-	jsr	CHRIN
+	; print menu
+:	stz	curhotkeymenu
+:	jsr	updatehotkeys
+	jsr	waitforkey
+	inc	curhotkeymenu
+	lda	maxhotkeymenu
+	cmp	curhotkeymenu
+	bcs	:-
+	bra	:--
 	rts
+
+waitforkey:
+	jsr	GETIN
+	cmp	#0
+	beq	waitforkey
 
 ;******************************************************************************
 ; Return length of string in .Y
@@ -96,12 +90,19 @@ strrev:
 ; Initialize global variables to sane default values
 ;******************************************************************************
 initvars:
-	lda	#BLUE
-	sta	bgcolor
-	lda	#WHITE
-	sta	fgcolor
-	lda	#CYAN
-	sta	hilightbg
-	lda	#BLACK
-	sta	hilightfg
+	lda	#(BLUE<<4)|WHITE
+	sta	txtcolor
+	lda	#(CYAN<<4)|BLUE
+	sta	hilightcol
+	lda	#(BLUE<<4)|YELLOW
+	sta	headercol
+	lda	#(CYAN<<4)|BLACK
+	sta	hotkeycol
+	lda	#1
+	sta	twopanels
+	lda	#40
+	sta	panel2x
+	stz	curhotkeymenu
+	lda	#3			; Number of menus for 20 or 22 width
+	sta	maxhotkeymenu
 	rts
