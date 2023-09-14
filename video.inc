@@ -25,6 +25,9 @@ BOT_TEE  = $72 ; PET=$B2
 LEFT_TEE = $73 ; PET=$B3
 RIGT_TEE = $6B ; PET=$AB
 
+HOR_LINL = $67
+HOR_LINR = $65
+
 helpstr:
 	.byte	"help "
 editstr:
@@ -60,10 +63,10 @@ MORESTRLEN = morestr_end-morestr
 ;******************************************************************************
 drawboxs:
 	lda	#2
-	jsr	vtui_set_stride
+	VTUI_SET_STRIDE
 	ldy	#0		; Gotoxy 0, 0
 	lda	#0
-	jsr	vtui_gotoxy
+	VTUI_GOTOXY
 	lda	scrwidth
 	ldx	twopanels	; If 0, then panel width = screenwidth
 	beq	:+
@@ -74,6 +77,21 @@ drawboxs:
 	sta	r2l
 	lda	#2
 	VTUI_BORDER
+	lda	scrheight	; Calculate 4 lines up from bottom
+	sec
+	sbc	#4
+	tay
+	lda	#0
+	VTUI_GOTOXY
+	lda	#RIGT_TEE	; Draw a horizontal line to be used as 
+	VTUI_PLOT_CHAR		; full-length display of filename
+	lda	#HOR_LINE
+	ldy	r1l		; Loading panel width
+	dey
+	dey
+	VTUI_HLINE
+	lda	#LEFT_TEE
+	VTUI_PLOT_CHAR
 drawbox2:
 	lda	twopanels
 	bne	:+
@@ -87,7 +105,22 @@ drawbox2:
 	dec
 	sta	r2l
 	lda	#2
-	jmp	vtui_border
+	VTUI_BORDER
+	lda	scrheight	; Calculate 4 lines up from bottom
+	sec
+	sbc	#4
+	tay
+	lda	panel2x
+	VTUI_GOTOXY
+	lda	#RIGT_TEE	; Draw a horizontal line to be used as
+	VTUI_PLOT_CHAR		; full-length display of filename
+	lda	#HOR_LINE
+	ldy	r1l		; panel width
+	dey
+	dey
+	VTUI_HLINE
+	lda	#LEFT_TEE
+	jmp	vtui_plot_char
 
 ;******************************************************************************
 ; Get the current screen mode and write the width and height to the
@@ -178,12 +211,12 @@ updatehotkeys:
 	; Menu line 2
 	jsr	printhk5
 	jsr	printhk6
-	bra	@end
+	jmp	@end
 @ismenu3_20_22:			; Then we must be showing menu line 3!
 	; Menu line 2
 	jsr	printhk7
 	jsr	printhk8
-	bra	@end
+	jmp	@end
 @is32:
 	cmp	#2		; Value of 2 = mode width 32 columns
 	bne	@is40
@@ -192,25 +225,30 @@ updatehotkeys:
 	bne	@ismenu1_32
 	; Menu line 0
 	jsr	printhk1
+	jsr	normspace
 	jsr	printhk2
+	jsr	normspace
 	jsr	printhk3
-	ldx	txtcolor
-	lda	#' '
-	VTUI_PLOT_CHAR
+	jsr	normspace
+	jsr	normspace
 	bra	@end
 @ismenu1_32:			; Are we showing menu line 1?
 	cmp	#1
 	bne	@ismenu2_32
 	; Menu line 1
 	jsr	printhk4
+	jsr	normspace
 	jsr	printhk5
+	jsr	normspace
 	jsr	printhk6
+	jsr	normspace
 	bra	@end
 @ismenu2_32:			; Then we must be showing menu line 2!
 	; menu line 2
 	jsr	printhk7
+	jsr	normspace
 	jsr	printhk8
-	ldy	#7		; As this menu line is shorter than the others
+	ldy	#9		; As this menu line is shorter than the others
 	ldx	txtcolor	; we print a series of spaces with blue background
 :	lda	#' '		; to erase any previous text
 	VTUI_PLOT_CHAR
@@ -225,19 +263,25 @@ updatehotkeys:
 	bne	@ismenu1_40
 	; Menu line 0
 	jsr	printhk1
+	jsr	normspace
 	jsr	printhk2
+	jsr	normspace
 	jsr	printhk3
+	jsr	normspace
 	jsr	printhk4
-	ldx	txtcolor
-	lda	#' '
-	VTUI_PLOT_CHAR
+	jsr	normspace
+	jsr	normspace
 	bra	@end
 @ismenu1_40:			; Here we must be showing menu line 1!
 	; Menu line 1
 	jsr	printhk5
+	jsr	normspace
 	jsr	printhk6
+	jsr	normspace
 	jsr	printhk7
+	jsr	normspace
 	jsr	printhk8
+	jsr	normspace
 
 @end:	ldx	txtcolor
 	lda	#'9'
@@ -252,12 +296,21 @@ updatehotkeys:
 	jmp	vtui_print_str
 @longmenu:			; Value of 0 = mode width = 80 columns
 	jsr	printhk1
+	jsr	normspace
 	jsr	printhk2
+	jsr	normspace
 	jsr	printhk3
+	jsr	normspace
 	jsr	printhk4
+	jsr	normspace
 	jsr	printhk5
+	jsr	normspace
 	jsr	printhk6
+	ldx	txtcolor
+	lda	#' '
+	VTUI_PLOT_CHAR
 	jsr	printhk7
+	jsr	normspace
 	jsr	printhk8
 	rts
 
@@ -275,6 +328,12 @@ clrscr:
 ; Helper functions for updatehotkeys to display the hotkey menu line at the bottom
 ; of the screen
 ;******************************************************************************
+normspace:
+	ldx	txtcolor
+	lda	#' '
+	jmp	vtui_plot_char
+
+
 printhk1:
 	ldx	txtcolor
 	lda	#'1'

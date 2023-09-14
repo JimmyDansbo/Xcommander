@@ -23,21 +23,31 @@ main:
 
 	jsr	drawboxs
 
+:	jsr	GETIN
+	cmp	#0
+	bne	:-
+
 	; print menu
 :	stz	curhotkeymenu
 :	jsr	updatehotkeys
 	jsr	waitforkey
+	cmp	#$1B			; ESC
+	beq	@end
+	cmp	#$10			; F9
+	bne	:-
 	inc	curhotkeymenu
 	lda	maxhotkeymenu
 	cmp	curhotkeymenu
 	bcs	:-
 	bra	:--
-	rts
+@end:	rts
 
 waitforkey:
 	jsr	GETIN
 	cmp	#0
 	beq	waitforkey
+	rts
+
 
 ;******************************************************************************
 ; Return length of string in .Y
