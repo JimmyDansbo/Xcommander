@@ -30,33 +30,31 @@ HOR_LINR = $65
 
 helpstr:
 	.byte	"help "
+HELPSTRLEN = *-helpstr
 editstr:
 	.byte	"edit "
+EDITSTRLEN = *-editstr
 copystr:
 	.byte	"copy "
+COPYSTRLEN = *-copystr
 renmovstr:
 	.byte	"renmov "
+RENMOVESTRLEN = *-renmovstr
 mkdirstr:
 	.byte	"mkdir "
+MKDIRSTRLEN = *-mkdirstr
 deletestr:
 	.byte	"delete "
+DELETESTRLEN = *-deletestr
 pulldnstr:
 	.byte	"pulldn "
+PULLDNSTRLEN = *-pulldnstr
 quitstr:
 	.byte	"quit "
+QUITSTRLEN = *-quitstr
 morestr:
 	.byte	"more "
-morestr_end:
-
-HELPSTRLEN = editstr-helpstr
-EDITSTRLEN = copystr-editstr
-COPYSTRLEN = renmovstr-copystr
-RENMOVESTRLEN = mkdirstr-renmovstr
-MKDIRSTRLEN = deletestr-mkdirstr
-DELETESTRLEN = pulldnstr-deletestr
-PULLDNSTRLEN = quitstr-pulldnstr
-QUITSTRLEN = morestr-quitstr
-MORESTRLEN = morestr_end-morestr
+MORESTRLEN = *-morestr
 
 ;******************************************************************************
 ; Draw the box around the first panel
@@ -92,6 +90,9 @@ drawboxs:
 	VTUI_HLINE
 	lda	#LEFT_TEE
 	VTUI_PLOT_CHAR
+;******************************************************************************
+; Draw the box around the second panel
+;******************************************************************************
 drawbox2:
 	lda	twopanels
 	bne	:+
@@ -124,7 +125,7 @@ drawbox2:
 
 ;******************************************************************************
 ; Get the current screen mode and write the width and height to the
-; global variables scrwidht & scrheight
+; global variables scrwidth & scrheight
 ;******************************************************************************
 getscreenmode:
 	stz	twopanels
@@ -132,6 +133,36 @@ getscreenmode:
 	jsr	Screen_mode
 	stx	scrwidth
 	sty	scrheight
+
+				; switch (scrwidth)
+@case20:cpx	#20		; case: 20
+	bne	@case22
+	bra	:+		; Do the same as in case 22
+@case22:cpx	#22		; case: 22
+	bne	@case32
+:	lda	#3		; There are 4 (0-based) lines of menus
+	sta	maxhotkeymenu
+	stz	twopanels	; Show only 1 panel
+	bra	@switchend	; break
+@case32:cpx	#32		; case: 32
+	bne	@case40
+	lda	#2		; There are 3 (0-based) lines of menus
+	sta	maxhotkeymenu
+	stz	twopanels	; Show only 1 panel
+	bra	@switchend	; break
+@case40:cpx	#40		; case: 40
+	bne	@default
+	lda	#1		; There are 2 (0-based) lines of menu
+	sta	maxhotkeymenu
+	sta	twopanels	; Show 2 panels
+	bra	@switchend	; break
+@default:			; default
+	stz	maxhotkeymenu	; There are 1 (0-based) menu line
+	lda	#1
+	sta	twopanels	; Show 2 panels
+@switchend:			; break
+
+
 	lda	#1		; Assume 40 columns
 	sta	maxhotkeymenu
 	cpx	#40		; is screen width 40 ?
