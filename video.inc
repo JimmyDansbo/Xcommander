@@ -2,17 +2,20 @@
 VIDEO_INC=1
 
 	jmp	VIDEO_INC_END
-offset		= $400
-scrwidth 	= offset+0
-scrheight	= offset+1
-txtcolor	= offset+2
-hilightcol	= offset+3
-headercol	= offset+4
-hotkeycol	= offset+5
-twopanels	= offset+6
-panel2x		= offset+7
-curhotkeymenu	= offset+8
-maxhotkeymenu	= offset+9
+voffset		= $400
+scrwidth 	= voffset+0
+scrheight	= voffset+1
+txtcolor	= voffset+2
+hilightcol	= voffset+3
+headercol	= voffset+4
+hotkeycol	= voffset+5
+twopanels	= voffset+6
+panel2x		= voffset+7
+curhotkeymenu	= voffset+8
+maxhotkeymenu	= voffset+9
+scrollval	= voffset+10
+
+video_variables_end = voffset+11
 
 HOR_LINE = $40 ; PET=$C0
 VER_LINE = $5D ; PET=$DD
@@ -24,6 +27,10 @@ TOP_TEE  = $71 ; PET=$B1
 BOT_TEE  = $72 ; PET=$B2
 LEFT_TEE = $73 ; PET=$B3
 RIGT_TEE = $6B ; PET=$AB
+
+SCR20_SCROL_VAL	= $A0
+SCR22_SCROL_VAL = $B0
+SCR32_SCROL_VAL = $00
 
 HOR_LINL = $67
 HOR_LINR = $65
@@ -55,6 +62,62 @@ QUITSTRLEN = *-quitstr
 morestr:
 	.byte	"more "
 MORESTRLEN = *-morestr
+
+;******************************************************************************
+; Switch between panel1 and panel2 if they are not shown on a single screen
+; This only happens X resolution is below 40 columns
+;******************************************************************************
+switchpanel:
+	; If twopanels is non-zero, the two panels is shown on a single screen
+	; and no scrolling is necessary
+	lda	twopanels
+	beq	:+
+	rts
+	; If L1 HSCROLL value is 0, we are currently showing panel 1 and need
+	; to switch to showing panel 2
+:	lda	VERA_L1_HSCROLL_H
+	ora	VERA_L1_HSCROLL_L
+	beq	@show_panel_2
+	; Show Panel 1
+	lda	VERA_L1_HSCROLL_H	; Only decrement L1_HSCROLL_H if it is
+	beq	@countdown		; larger than 0
+	dec	VERA_L1_HSCROLL_H
+@countdown:
+	jsr	irqwait			; Wait for VERA IRQ hit
+	; Scroll left by $10 pixels
+	lda	VERA_L1_HSCROLL_L
+	sec
+	sbc	#$10
+	sta	VERA_L1_HSCROLL_L
+	bne	@countdown		; Loop while we have not reached 0
+	rts
+@show_panel_2:
+@countup:
+	jsr	irqwait			; Wait for VERA IRQ hit
+	; Scroll right by $10 pixels
+	lda	VERA_L1_HSCROLL_L
+	clc
+	adc	#$10
+	sta	VERA_L1_HSCROLL_L
+	cmp	scrollval		; Loop while we have not hit scrollval
+	bne	@countup
+	lda	scrollval		; If scrollvall is 0, we need to inc
+	bne	:+			; L1_HSCROLL_H to get to the correct
+	inc	VERA_L1_HSCROLL_H	; postition 
+:	rts
+
+
+;******************************************************************************
+; Wait for the VERA IRQ hit
+;******************************************************************************
+irqwait:
+	pha
+:	wai
+	lda	irqhit
+	bne	:-
+	inc	irqhit
+	pla
+	rts
 
 ;******************************************************************************
 ; Draw the box around the first panel
@@ -94,10 +157,10 @@ drawboxs:
 ; Draw the box around the second panel
 ;******************************************************************************
 drawbox2:
-	lda	twopanels
-	bne	:+
-	rts
-:	ldy	#0
+;	lda	twopanels
+;	bne	:+
+;	rts
+	ldy	#0
 	lda	panel2x
 	VTUI_GOTOXY
 	lda	panel2x
@@ -128,27 +191,30 @@ drawbox2:
 ; global variables scrwidth & scrheight
 ;******************************************************************************
 getscreenmode:
-	stz	twopanels
+	stz	twopanels	; Assume only 1 panel is shown at a time
+	stz	scrollval	; SCR32_SCROL_VAL
 	sec
 	jsr	Screen_mode
 	stx	scrwidth
 	sty	scrheight
 
-				; switch (scrwidth)
+	; switch (scrwidth)
 @case20:cpx	#20		; case: 20
 	bne	@case22
+	lda	#SCR20_SCROL_VAL
+	sta	scrollval
 	bra	:+		; Do the same as in case 22
 @case22:cpx	#22		; case: 22
 	bne	@case32
+	lda	#SCR22_SCROL_VAL
+	sta	scrollval
 :	lda	#3		; There are 4 (0-based) lines of menus
 	sta	maxhotkeymenu
-	stz	twopanels	; Show only 1 panel
 	bra	@switchend	; break
 @case32:cpx	#32		; case: 32
 	bne	@case40
 	lda	#2		; There are 3 (0-based) lines of menus
 	sta	maxhotkeymenu
-	stz	twopanels	; Show only 1 panel
 	bra	@switchend	; break
 @case40:cpx	#40		; case: 40
 	bne	@default
@@ -158,11 +224,12 @@ getscreenmode:
 	bra	@switchend	; break
 @default:			; default
 	stz	maxhotkeymenu	; There are 1 (0-based) menu line
-	lda	#1
-	sta	twopanels	; Show 2 panels
+	inc	twopanels	; Show 2 panels
 @switchend:			; break
 
-
+	stx	panel2x		; Assume panel2 is outside current screen
+				; (X resolution < 40) start x position is then
+				; the same as the screen width.
 	lda	#1		; Assume 40 columns
 	sta	maxhotkeymenu
 	cpx	#40		; is screen width 40 ?
@@ -223,14 +290,22 @@ updatehotkeys:
 	lda	curhotkeymenu	; This tells the menu line to show
 	bne	@ismenu1_20_22
 	; Menu line 0
-	jsr	printhk1
+	jsr	:+
+	lda	panel2x		; Start X for panel 2
+	asl
+	sta	VERA_ADDR_L
+:	jsr	printhk1
 	jsr	printhk2
 	jmp	@end
 @ismenu1_20_22:			; Are we showing menu line 1?
 	cmp	#1
 	bne	@ismenu2_20_22
 	; Menu line 1
-	jsr	printhk3
+	jsr	:+
+	lda	panel2x		; Start X for panel 2
+	asl
+	sta	VERA_ADDR_L
+:	jsr	printhk3
 	jsr	printhk4
 	ldx	txtcolor
 	lda	#' '
@@ -240,12 +315,20 @@ updatehotkeys:
 	cmp	#2
 	bne	@ismenu3_20_22
 	; Menu line 2
-	jsr	printhk5
+	jsr	:+
+	lda	panel2x		; Start X for panel 2
+	asl
+	sta	VERA_ADDR_L
+:	jsr	printhk5
 	jsr	printhk6
 	jmp	@end
 @ismenu3_20_22:			; Then we must be showing menu line 3!
 	; Menu line 2
-	jsr	printhk7
+	jsr	:+
+	lda	panel2x		; Start X for panel 2
+	asl
+	sta	VERA_ADDR_L
+:	jsr	printhk7
 	jsr	printhk8
 	jmp	@end
 @is32:
@@ -255,19 +338,27 @@ updatehotkeys:
 	lda	curhotkeymenu	; This tells the menu line to show
 	bne	@ismenu1_32
 	; Menu line 0
-	jsr	printhk1
+	jsr	:+
+	lda	panel2x		; Start X for panel 2
+	asl
+	sta	VERA_ADDR_L
+:	jsr	printhk1
 	jsr	normspace
 	jsr	printhk2
 	jsr	normspace
 	jsr	printhk3
 	jsr	normspace
 	jsr	normspace
-	bra	@end
+	jmp	@end
 @ismenu1_32:			; Are we showing menu line 1?
 	cmp	#1
 	bne	@ismenu2_32
 	; Menu line 1
-	jsr	printhk4
+	jsr	:+
+	lda	panel2x		; Start X for panel 2
+	asl
+	sta	VERA_ADDR_L
+:	jsr	printhk4
 	jsr	normspace
 	jsr	printhk5
 	jsr	normspace
@@ -276,7 +367,11 @@ updatehotkeys:
 	bra	@end
 @ismenu2_32:			; Then we must be showing menu line 2!
 	; menu line 2
-	jsr	printhk7
+	jsr	:+
+	lda	panel2x		; Start X for panel 2
+	asl
+	sta	VERA_ADDR_L
+:	jsr	printhk7
 	jsr	normspace
 	jsr	printhk8
 	ldy	#9		; As this menu line is shorter than the others
@@ -325,6 +420,7 @@ updatehotkeys:
 	lda	#0
 	ldy	#MORESTRLEN
 	jmp	vtui_print_str
+
 @longmenu:			; Value of 0 = mode width = 80 columns
 	jsr	printhk1
 	jsr	normspace
