@@ -9,6 +9,10 @@
 .include "video.inc"
 .include "file.inc"
 
+moffset		= file_variables_end
+irqhit		= moffset
+old_irq_handler = moffset+1 ; 2 bytes
+
 .macro WINC var
 	inc	var
 	bne	*+4
@@ -18,31 +22,83 @@
 ;******************************************************************************
 main:
 	jsr	initvars
+
+	; Save address of original IRQ handler
+	lda	$314
+	sta	old_irq_handler
+	lda	$315
+	sta	old_irq_handler+1
+	; Install custom IRQ handler, called irq_tick
+	sei
+	lda	#<irq_tick
+	sta	$314
+	lda	#>irq_tick
+	sta	$315
+	cli
+
 	jsr	getscreenmode
 	jsr	clrscr
 
 	jsr	drawboxs
 
+	; Empty keyboard buffer
 :	jsr	GETIN
 	cmp	#0
 	bne	:-
 
 	; print menu
-:	stz	curhotkeymenu
-:	jsr	updatehotkeys
-	jsr	waitforkey
+@startmenu:
+	stz	curhotkeymenu
+@updatemenu:
+	jsr	updatehotkeys
+@wait:	jsr	waitforkey
+
+	; switch (keypress)
+@case_esc:
 	cmp	#$1B			; ESC
 	beq	@end
+@caes_tab:
+	cmp	#$09			; TAB
+	bne	@case_f8
+	jsr	switchpanel
+@case_f8:
+	cmp	#$8C			; F8
+	beq	@end
+@case_f9:
 	cmp	#$10			; F9
-	bne	:-
+	bne	@wait
 	inc	curhotkeymenu
 	lda	maxhotkeymenu
 	cmp	curhotkeymenu
-	bcs	:-
-	bra	:--
-@end:	rts
+	bcs	@updatemenu
+	bra	@startmenu
+@end:	; Ensure HSCROLL is set to 0
+	stz	VERA_L1_HSCROLL_H
+	stz	VERA_L1_HSCROLL_L
 
+	; Restore original IRQ handler
+	sei
+	lda	old_irq_handler
+	sta	$314
+	lda	old_irq_handler+1
+	sta	$315
+	cli
+
+	rts
+
+
+;******************************************************************************
+; Update irqhit variable to show that an interrupt tick has occurred
+;******************************************************************************
+irq_tick:
+	stz	irqhit
+	jmp	(old_irq_handler)
+
+;******************************************************************************
+; Busy loop to wait for keyboard press
+;******************************************************************************
 waitforkey:
+	wai
 	jsr	GETIN
 	cmp	#0
 	beq	waitforkey
