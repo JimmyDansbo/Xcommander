@@ -30,6 +30,8 @@ vtui_get_decr	= VTUI_LIB+62
 	jsr	vtui_initialize
 	jmp	VTUI_LIB_END
 
+VTUI:	.incbin	"VTUI1.0.BIN"
+
 ; *****************************************************************************
 ; Use KERNAL API to set screen to 80x60 or 40x30 or swap between them.
 ; *****************************************************************************
@@ -267,8 +269,6 @@ vtui_get_decr	= VTUI_LIB+62
 .macro VTUI_INPUT_STR
 	jsr	vtui_input_str
 .endmacro
-
-VTUI:	.incbin	"VTUI1.0.BIN"
 
 VTUI_LIB_END:
 .endif
