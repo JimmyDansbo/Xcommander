@@ -166,9 +166,14 @@ initvars:
 	sta	hotkeycol
 	lda	#1
 	sta	twopanels
+	sta	part1			; Partition# active on panel 1
+	sta	part2			; Partition# actove on panel 2
 	lda	#40
 	sta	panel2x
 	stz	curhotkeymenu
 	lda	#3			; Number of menus for 20 or 22 width
 	sta	maxhotkeymenu
+	lda	#8
+	sta	devid1			; DeviceID active on panel 1
+	sta	devid2			; DeviceID active on panel 2
 	rts
