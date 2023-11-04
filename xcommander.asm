@@ -12,12 +12,12 @@
 moffset		= file_variables_end
 irqhit		= moffset
 old_irq_handler = moffset+1 ; 2 bytes
-
-.macro WINC var
-	inc	var
-	bne	*+4
-	inc	var+1
-.endmacro
+buffer		= moffset+3 ; 41 bytes - 40 bytes buffer + 0 termination
+main_vars_end	= moffset+44	; temporary variable that can just bre replaced
+				; if more variables is needed. It is only to show
+				; where the next variable should start.
+				; It also shows how much memory is allocated to
+				; variables
 
 ;******************************************************************************
 main:
@@ -40,6 +40,8 @@ main:
 	jsr	clrscr
 
 	jsr	drawboxs
+	ldx	hilightcol
+	jsr	updatecursor
 
 	; Empty keyboard buffer
 :	jsr	GETIN
@@ -72,6 +74,7 @@ main:
 	cmp	curhotkeymenu
 	bcs	@updatemenu
 	bra	@startmenu
+
 @end:	; Ensure HSCROLL is set to 0
 	stz	VERA_L1_HSCROLL_H
 	stz	VERA_L1_HSCROLL_L
@@ -84,6 +87,34 @@ main:
 	sta	$315
 	cli
 
+	; Clear screen
+	lda	#PET_CLEAR
+	jsr	CHROUT
+
+	rts
+
+;******************************************************************************
+; SET VERA DATA1 address while preserving VERA_CTRL
+;******************************************************************************
+; INPUTS:	.A = ADDR_H
+;		.X = ADDR_L
+;		.Y = ADDR_M
+; USES:		.X & .A
+;******************************************************************************
+set_vera1_addr:
+	pha				; Save ADDR_H
+	lda	VERA_CTRL		; Save CTRL register so it can be
+	pha				; Restored again
+	ora	#$01			; Set ADDRSEL to 1
+	sta	VERA_CTRL
+	
+	stx	VERA_ADDR_L
+	sty	VERA_ADDR_M
+	plx				; Pull CTRL register
+	pla				; Pull ADDR_H
+	sta	VERA_ADDR_H
+
+	stx	VERA_CTRL		; Restore CTRL register
 	rts
 
 
@@ -116,6 +147,7 @@ waitforkey:
 ; USES:		.A & TMP_PTR0
 ;******************************************************************************
 strlen:
+	clc
 	stx	TMP_PTR0	; Store string address in TMP_PTR0
 	sty	TMP_PTR0+1
 	ldy	#0
@@ -134,6 +166,8 @@ strlen:
 ; USES:		.A & TMP_PTR0
 ;******************************************************************************
 strrev:
+	phx
+	phy
 	jsr	strlen		; Get length of string
 	bcs	@end		; If longer than 256 bytes, it's an error
 	cpy	#2		; No reversal if length<2
@@ -150,30 +184,66 @@ strrev:
 	beq	@end		; If not 0, do it twice as TMP_PTR0 has just
 	dey			; been moved 1 char forward
 	bne	@loop
-@end:	rts
+@end:	pla
+	sta	TMP_PTR0+1
+	pla
+	sta	TMP_PTR0
+	rts
 
 ;******************************************************************************
 ; Initialize global variables to sane default values
 ;******************************************************************************
 initvars:
+	; Colors
 	lda	#(BLUE<<4)|WHITE
 	sta	txtcolor
-	lda	#(CYAN<<4)|BLUE
+	lda	#(YELLOW<<4)|BLUE
 	sta	hilightcol
 	lda	#(BLUE<<4)|YELLOW
 	sta	headercol
 	lda	#(CYAN<<4)|BLACK
 	sta	hotkeycol
-	lda	#1
-	sta	twopanels
-	sta	part1			; Partition# active on panel 1
-	sta	part2			; Partition# actove on panel 2
+	; Panels, menus and coordinates
 	lda	#40
 	sta	panel2x
 	stz	curhotkeymenu
 	lda	#3			; Number of menus for 20 or 22 width
 	sta	maxhotkeymenu
+	lda	#1
+	sta	twopanels
+	sta	activex
+	sta	activey
+	sta	cursor1y
+	sta	cursor2y
+	stz	file1offset
+	stz	file2offset
+
+	; File-/device-id's, partitions and paths
+	sta	part1			; Partition# active on panel 1
+	sta	part2			; Partition# actove on panel 2
+	sta	activepart
 	lda	#8
 	sta	devid1			; DeviceID active on panel 1
 	sta	devid2			; DeviceID active on panel 2
+	sta	activedev
+	lda	#FILEID1
+	sta	activefileid
+	lda	#^PATH1ADDR		; Store VERA Bank ID in .C
+	lsr
+	ldx	#<PATH1ADDR
+	stx	activepathaddr
+	ldy	#>PATH1ADDR
+	sty	activepathaddr+1
+	jsr	set_vera1_addr
+	lda	#'/'			; Set root path for panel 1
+	sta	VERA_DATA1
+	stz	VERA_DATA1		; Path string is 0-terminated
+	lda	#^PATH2ADDR		; Store VERA Bank ID in .C
+	lsr
+	ldx	#<PATH2ADDR
+	ldy	#>PATH2ADDR
+	jsr	set_vera1_addr
+	lda	#'/'			; Set root path for panel 2
+	sta	VERA_DATA1
+	stz	VERA_DATA1		; Path string is 0-terminated
 	rts
