@@ -30,6 +30,9 @@ LISTPARTLEN	= *-listpart
 changepart:
 	.byte	"cp "
 CHANGEPARTLEN	= *-changepart
+getpart:
+	.byte	"g-p"
+GETPARTLEN	= *-getpart
 
 FILEID1		= $10		; File ID for panel1 dir listing
 FILEID2		= $20		; File ID for panel2 dir listing
@@ -76,6 +79,43 @@ skipheader:
 	bne	@zero		; If not, keep reading
 	clc			
 	rts
+
+;******************************************************************************
+; Get current active partition and store it in the activepart variable
+;******************************************************************************
+getcurpart:
+	lda	activefileid		; Open command channel
+	ldx	activedev
+	ldy	#15
+	jsr	SETLFS
+	lda	#GETPARTLEN
+	ldx	#<getpart		; G-P
+	ldy	#>getpart
+	jsr	SETNAM
+	jsr	OPEN
+	bcc	:+			; Exit on error
+	rts
+:	ldx	activefileid
+	jsr	CHKIN
+	jsr	CHRIN			; 3rd byte is the current partition
+	jsr	CHRIN
+	jsr	CHRIN
+	pha				; Save partition id to read err status
+	jsr	READST
+	pha				; Save error status to close drive
+	lda	activefileid
+	jsr	CLOSE
+	jsr	CLRCHN
+	pla				; Get error status
+	plx				; Get current partition id
+	cmp	#0			
+	bne	@err
+	stx	activepart		; If no error, set new partition id
+	clc				; Show now error
+	rts
+@err:	sec				; Show error has occurred
+	rts
+	
 
 ;******************************************************************************
 ; Get current directory and write it to the path addr of the currently
@@ -289,6 +329,37 @@ drivepresent:
 	jsr	CLOSE
 	jsr	CLRCHN
 	rts
+
+; Example of handling output of the G-P command:
+;MooingLemur — 2023/11/05 6:57 AM
+;10 OPEN 15,8,15,"G-P"
+;20 GET#15,T$
+;30 GET#15,R$
+;40 GET#15,PN$
+;50 BINPUT#15,NA$,15
+;60 PRINT "ACTIVE PARTITION NUMBER:"ASC(PN$)
+;70 PRINT "PARTITION TYPE:"ASC(T$)
+;80 PRINT "PARTITION NAME: "NA$
+;90 GET#15,A$
+;100 PS=ASC(A$)*16777216
+;110 GET#15,A$
+;120 PS=ASC(A$)*65536+PS
+;130 GET#15,A$
+;140 PS=ASC(A$)*256+PS
+;150 GET#15,A$
+;160 PS=ASC(A$)+PS
+;170 PRINT"PARTITION START LBA (SECTOR):"PS
+;180 BINPUT#15,R$,4
+;190 GET#15,A$
+;200 PZ=ASC(A$)*16777216
+;210 GET#15,A$
+;220 PZ=ASC(A$)*65536+PZ
+;230 GET#15,A$
+;240 PZ=ASC(A$)*256+PZ
+;250 GET#15,A$
+;260 PZ=ASC(A$)+PZ
+;270 PRINT"PARTITION SIZE IN LBAS (SECTORS):"PZ
+
 
 FILE_INC_END:
 .endif
