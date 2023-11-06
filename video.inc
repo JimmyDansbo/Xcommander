@@ -141,6 +141,10 @@ switchpanel:
 	sta	activepart
 	lda	#FILEID2		; Set panel2 file id
 	sta	activefileid
+	lda	activefileoffset	; Save panel1 file offset
+	sta	file1offset
+	lda	file2offset		; Retrieve panel2 file offset
+	sta	activefileoffset
 
 	bra	@scroll
 @activate_panel1:
@@ -160,6 +164,10 @@ switchpanel:
 	sta	activepart
 	lda	#FILEID1		; Set panel1 file id
 	sta	activefileid
+	lda	activefileoffset	; Save panel2 file offset
+	sta	file2offset
+	lda	file1offset		; Retrieve panel1 file offset
+	sta	activefileoffset
 
 @scroll:ldx	hilightcol
 	jsr	updatecursor

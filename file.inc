@@ -6,14 +6,17 @@ devid1		= foffset+0
 devid2		= foffset+1
 part1		= foffset+2
 part2		= foffset+3
+file1offset	= foffset+4
+file2offset	= foffset+5
 activedev	= foffset+4
 activepart	= foffset+5
-activefileid	= foffset+6
-activepathaddr	= foffset+7 ; 2 bytes - VERA BANK will always be 1
-file1offset	= foffset+9
-file2offset	= foffset+10
+activefileoffset= foffset+6
+activefileid	= foffset+7
+activepathaddr	= foffset+8 ; 2 bytes - VERA BANK will always be 1
+file1offset	= foffset+10
+file2offset	= foffset+11
 
-file_variables_end = foffset+11
+file_variables_end = foffset+12
 
 listdir:
 	.byte	"$=l"
