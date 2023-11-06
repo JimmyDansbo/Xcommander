@@ -22,7 +22,6 @@ main_vars_end	= moffset+44	; temporary variable that can just bre replaced
 ;******************************************************************************
 main:
 	jsr	initvars
-
 	; Save address of original IRQ handler
 	lda	$314
 	sta	old_irq_handler
@@ -194,6 +193,7 @@ strrev:
 ; Initialize global variables to sane default values
 ;******************************************************************************
 initvars:
+	stz	buffer+40
 	; Colors
 	lda	#(BLUE<<4)|WHITE
 	sta	txtcolor
@@ -215,8 +215,10 @@ initvars:
 	sta	activey
 	sta	cursor1y
 	sta	cursor2y
+	;	#0
 	stz	file1offset
 	stz	file2offset
+	stz	activefileoffset
 
 	; File-/device-id's, partitions and paths
 	sta	part1			; Partition# active on panel 1
@@ -228,8 +230,8 @@ initvars:
 	sta	activedev
 	lda	#FILEID1
 	sta	activefileid
-	lda	#^PATH1ADDR		; Store VERA Bank ID in .C
-	lsr
+	lda	#^PATH1ADDR		; Store VERA Bank ID in .A
+	ora	#$10			; and increment by 1
 	ldx	#<PATH1ADDR
 	stx	activepathaddr
 	ldy	#>PATH1ADDR
@@ -238,8 +240,8 @@ initvars:
 	lda	#'/'			; Set root path for panel 1
 	sta	VERA_DATA1
 	stz	VERA_DATA1		; Path string is 0-terminated
-	lda	#^PATH2ADDR		; Store VERA Bank ID in .C
-	lsr
+	lda	#^PATH2ADDR		; Store VERA Bank ID in .A
+	ora	#$10			; and increment by 1
 	ldx	#<PATH2ADDR
 	ldy	#>PATH2ADDR
 	jsr	set_vera1_addr
