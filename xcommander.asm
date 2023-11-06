@@ -22,6 +22,7 @@ main_vars_end	= moffset+44	; temporary variable that can just bre replaced
 ;******************************************************************************
 main:
 	jsr	initvars
+	jsr	getcurdir
 	; Save address of original IRQ handler
 	lda	$314
 	sta	old_irq_handler
@@ -93,6 +94,59 @@ main:
 	rts
 
 ;******************************************************************************
+; Switch the active variable set between the two panels
+;******************************************************************************
+; INPUT:	.C - 1 = switch to panel1, 0 = switch to panel2
+;******************************************************************************
+swapvars:
+	bcs	@activate_panel1
+@activate_panel2:
+	lda	panel2x
+	inc
+	sta	activex
+	lda	activey			; Save panel1 cursor Y position
+	sta	cursor1y
+	lda	cursor2y		; Retrieve panel2 cursor Y position
+	sta	activey
+	lda	activedev		; Save panel1 device id
+	sta	devid1
+	lda	devid2			; Retrieve panel2 device id
+	sta	activedev
+	lda	activepart		; Save panel1 partition id
+	sta	part1
+	lda	part2			; Retrieve panel2 partition id
+	sta	activepart
+	lda	#FILEID2		; Set panel2 file id
+	sta	activefileid
+	lda	activefileoffset	; Save panel1 file offset
+	sta	file1offset
+	lda	file2offset		; Retrieve panel2 file offset
+	sta	activefileoffset
+	rts
+@activate_panel1:
+	lda	#1
+	sta	activex
+	lda	activey			; Save panel2 cursor Y position
+	sta	cursor2y
+	lda	cursor1y		; Retrieve panel1 cursor Y position
+	sta	activey
+	lda	activedev		; Save panel2 device id
+	sta	devid2
+	lda	devid1			; Retrieve panel1 device id
+	sta	activedev
+	lda	activepart		; Save panel2 partition id
+	sta	part2
+	lda	part1			; Retrieve panel1 partition id
+	sta	activepart
+	lda	#FILEID1		; Set panel1 file id
+	sta	activefileid
+	lda	activefileoffset	; Save panel2 file offset
+	sta	file2offset
+	lda	file1offset		; Retrieve panel1 file offset
+	sta	activefileoffset
+	rts
+
+;******************************************************************************
 ; SET VERA DATA1 address while preserving VERA_CTRL
 ;******************************************************************************
 ; INPUTS:	.A = ADDR_H
@@ -143,14 +197,14 @@ waitforkey:
 ;		.Y = high byte of string start address
 ; OUTPUT:	.Y = Length of string
 ;		.C = Set if string longer than 256 bytes
-; USES:		.A & TMP_PTR0
+; USES:		.A & r0
 ;******************************************************************************
 strlen:
 	clc
-	stx	TMP_PTR0	; Store string address in TMP_PTR0
-	sty	TMP_PTR0+1
+	stx	r0l		; Store string address in r0
+	sty	r0h
 	ldy	#0
-:	lda	(TMP_PTR0),y	; Read bytes from string until 0-char
+:	lda	(r0),y	; Read bytes from string until 0-char
 	beq	@end
 	iny
 	bne	:-		; If Y rolled over to zero, string is too long
@@ -162,7 +216,7 @@ strlen:
 ;******************************************************************************
 ; INPUT:	.X = low byte of string start address
 ;		.Y = high byte of string start address
-; USES:		.A & TMP_PTR0
+; USES:		.A & r0
 ;******************************************************************************
 strrev:
 	phx
@@ -172,21 +226,21 @@ strrev:
 	cpy	#2		; No reversal if length<2
 	bcc	@end
 	dey
-@loop:	lda	(TMP_PTR0),y	; Read from end of string
+@loop:	lda	(r0),y		; Read from end of string
 	pha			
-	lda	(TMP_PTR0)	; Read from beginning of string
-	sta	(TMP_PTR0),y	; Write to end of string
+	lda	(r0)		; Read from beginning of string
+	sta	(r0),y		; Write to end of string
 	pla
-	sta	(TMP_PTR0)	; Write to beginning of string
-	WINC	TMP_PTR0	; Inc TMP_PTR0 to go to next char
+	sta	(r0)		; Write to beginning of string
+	WINC	r0		; Inc r0 to go to next char
 	dey			; Dec .Y to go from right to left
-	beq	@end		; If not 0, do it twice as TMP_PTR0 has just
+	beq	@end		; If not 0, do it twice as r0 has just
 	dey			; been moved 1 char forward
 	bne	@loop
 @end:	pla
-	sta	TMP_PTR0+1
+	sta	r0h
 	pla
-	sta	TMP_PTR0
+	sta	r0l
 	rts
 
 ;******************************************************************************

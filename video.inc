@@ -122,52 +122,7 @@ switchpanel:
 
 	lda	activex			; If activex is less than 2 then the 
 	cmp	#2			; currently active panel is 1
-	bcs	@activate_panel1
-@activate_panel2:
-	lda	panel2x
-	inc
-	sta	activex
-	lda	activey			; Save panel1 cursor Y position
-	sta	cursor1y
-	lda	cursor2y		; Retrieve panel2 cursor Y position
-	sta	activey
-	lda	activedev		; Save panel1 device id
-	sta	devid1
-	lda	devid2			; Retrieve panel2 device id
-	sta	activedev
-	lda	activepart		; Save panel1 partition id
-	sta	part1
-	lda	part2			; Retrieve panel2 partition id
-	sta	activepart
-	lda	#FILEID2		; Set panel2 file id
-	sta	activefileid
-	lda	activefileoffset	; Save panel1 file offset
-	sta	file1offset
-	lda	file2offset		; Retrieve panel2 file offset
-	sta	activefileoffset
-
-	bra	@scroll
-@activate_panel1:
-	lda	#1
-	sta	activex
-	lda	activey			; Save panel2 cursor Y position
-	sta	cursor2y
-	lda	cursor1y		; Retrieve panel1 cursor Y position
-	sta	activey
-	lda	activedev		; Save panel2 device id
-	sta	devid2
-	lda	devid1			; Retrieve panel1 device id
-	sta	activedev
-	lda	activepart		; Save panel2 partition id
-	sta	part2
-	lda	part1			; Retrieve panel1 partition id
-	sta	activepart
-	lda	#FILEID1		; Set panel1 file id
-	sta	activefileid
-	lda	activefileoffset	; Save panel2 file offset
-	sta	file2offset
-	lda	file1offset		; Retrieve panel1 file offset
-	sta	activefileoffset
+	jsr	swapvars
 
 @scroll:ldx	hilightcol
 	jsr	updatecursor
