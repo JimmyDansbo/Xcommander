@@ -8,13 +8,11 @@ part1		= foffset+2
 part2		= foffset+3
 file1offset	= foffset+4
 file2offset	= foffset+5
-activedev	= foffset+4
-activepart	= foffset+5
-activefileoffset= foffset+6
-activefileid	= foffset+7
-activepathaddr	= foffset+8 ; 2 bytes - VERA BANK will always be 1
-file1offset	= foffset+10
-file2offset	= foffset+11
+activedev	= foffset+6
+activepart	= foffset+7
+activefileoffset= foffset+8
+activefileid	= foffset+9
+activepathaddr	= foffset+10 ; 2 bytes - VERA BANK will always be 1
 
 file_variables_end = foffset+12
 
@@ -44,7 +42,15 @@ PATH1ADDR	= $1EC00
 PATH2ADDR	= $1EE00
 PATHTMP		= $1F9BF
 
-discardtoquote:
+;******************************************************************************
+; Read characters from an open input stream until a specific character is
+; reached.
+;******************************************************************************
+; INPUTS:	r2l = character to search for
+; OUTPUTS:	.C set on error
+;		.A = errorcode on error
+;******************************************************************************
+discardtochar:
 	jsr	CHRIN		; Read character and save it in .Y
 	tax			; while reading error status
 	jsr	READST		; If no error, we can continue
@@ -52,8 +58,8 @@ discardtoquote:
 	beq	:+
 	sec			; Otherwise, set .C and exit
 	rts
-:	cpx	#'"'		; Have we found a quote?
-	bne	discardtoquote	; If not, keep reading
+:	cpx	r2l		; Have we found the character?
+	bne	discardtochar	; If not, keep reading
 	clc
 	rts	
 
@@ -67,21 +73,15 @@ discardtoquote:
 ;		.A READST-error code if error otherwise 0
 ;******************************************************************************
 skipheader:
-	jsr	discardtoquote
+	lda	#'"'
+	sta	r2l
+	jsr	discardtochar
 	bcc	@zero
 	rts
 @zero:
-	jsr	CHRIN		; Read character and save it in .Y
-	tax			; while reading error status
-	jsr	READST		; If no error, we can continue
-	cmp	#0
-	beq	:+
-	sec			; Otherwise, set .C and exit
-	rts
-:	cpx	#0		; Have we found a $00 ?
-	bne	@zero		; If not, keep reading
-	clc			
-	rts
+	lda	#0
+	sta	r2l
+	bra	discardtochar
 
 ;******************************************************************************
 ; Get current active partition and store it in the activepart variable
@@ -125,21 +125,20 @@ getcurpart:
 ; selected panel. 
 ;******************************************************************************
 ; USES:		All registers
-;		TMP_PTR0
+;		r1
 ;		global buffer
 ;******************************************************************************
-getcurdir:
+getcurdir:.byte $db
 	ldx	#<PATHTMP		; Point VERA_DATA1 to PATHTMP address
 	ldy	#>PATHTMP
 	lda	#$19			; Decrement by 1 on VERA_DATA1 access
 	jsr	set_vera1_addr
 	stz	VERA_DATA1		; 0-termination of reversely written string
 
-	lda	#<buffer		; Store buffer address in TMP_PTR0
-	sta	TMP_PTR0
+	lda	#<buffer		; Store buffer address in r1
+	sta	r1l
 	lda	#>buffer
-	sta	TMP_PTR0+1
-
+	sta	r1h
 	lda	activefileid		; Open device/drive for reading
 	ldx	activedev
 	ldy	#0
@@ -159,9 +158,11 @@ getcurdir:
 	jsr	skipheader
 	bcs	@end
 
+	lda	#'"'
+	sta	r2l
 @dirloop:
 	ldy	#0			; Reset buffer counter
-	jsr	discardtoquote		; Find next quote
+	jsr	discardtochar		; Find next quote
 	bcs	@end
 @nextchar:
 	jsr	CHRIN			; Read a char of dir-name and store in .X
@@ -174,12 +175,12 @@ getcurdir:
 :	cpx	#'"'			; If we reach quote, current directory
 	beq	@dirdone		; name is complete
 	txa				; Store char of dir-name in buffer
-	sta	(TMP_PTR0),y
+	sta	(r1),y
 	iny
 	bra	@nextchar
 @dirdone:
 	lda	#0			; Terminate the dir-name with 0
-	sta	(TMP_PTR0),y
+	sta	(r1),y
 	ldx	#<buffer		; Reverse the dir-name
 	ldy	#>buffer
 	jsr	strrev
@@ -187,7 +188,7 @@ getcurdir:
 	lda	#'/'			
 	sta	VERA_DATA1
 	ldy	#0			; Reset buffer counter
-@vloop:	lda	(TMP_PTR0),y		; Copy buffer to VRAM
+@vloop:	lda	(r1),y			; Copy buffer to VRAM
 	beq	@dirloop		; If char is 0, this dirname is done
 	cmp	#'/'			; Skip dir-name if it is /
 	beq	:+
