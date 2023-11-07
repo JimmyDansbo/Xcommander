@@ -154,7 +154,7 @@ AFLOW_BIT		= %00001000
 ; **************************************************************************
 ; Set the stride, if it is negative, the DECR bit will be set
 ; **************************************************************************
-; INPUT:	.stride = 4 bit signed inc/dec value - negative val decremsnts
+; INPUT:	.stride = 4 bit signed inc/dec value - negative val decrements
 ; USES:		A register
 ; **************************************************************************
 .macro VERA_SET_STRIDE stride
