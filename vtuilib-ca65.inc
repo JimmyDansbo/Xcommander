@@ -5,27 +5,27 @@ VTUILIB_INC=1
 VTUI_LIB=VTUI+2
 
 vtui_initialize	= VTUI_LIB+0
-vtui_screen_set	= VTUI_LIB+2
-vtui_set_bank	= VTUI_LIB+5
-vtui_set_stride	= VTUI_LIB+8
-vtui_set_decr	= VTUI_LIB+11
-vtui_clr_scr	= VTUI_LIB+14
-vtui_gotoxy	= VTUI_LIB+17
-vtui_plot_char	= VTUI_LIB+20
-vtui_scan_char	= VTUI_LIB+23
-vtui_hline	= VTUI_LIB+26
-vtui_vline	= VTUI_LIB+29
-vtui_print_str	= VTUI_LIB+32
-vtui_fill_box	= VTUI_LIB+35
-vtui_pet2scr	= VTUI_LIB+38
-vtui_scr2pet	= VTUI_LIB+41
-vtui_border	= VTUI_LIB+44
-vtui_save_rect	= VTUI_LIB+47
-vtui_rest_rect	= VTUI_LIB+50
-vtui_input_scr	= VTUI_LIB+53
-vtui_get_bank	= VTUI_LIB+56
-vtui_get_stride	= VTUI_LIB+59
-vtui_get_decr	= VTUI_LIB+62
+vtui_screen_set	= VTUI_LIB+2	; .A = screenmode
+vtui_set_bank	= VTUI_LIB+5	; .C = bank number
+vtui_set_stride	= VTUI_LIB+8	; .A = stride value
+vtui_set_decr	= VTUI_LIB+11	; .C = (1 = decrement, 0 = increment)
+vtui_clr_scr	= VTUI_LIB+14	; .A = char, .X = color
+vtui_gotoxy	= VTUI_LIB+17	; .A = X coor, .Y = Y coord
+vtui_plot_char	= VTUI_LIB+20	; .A = char, .X = color
+vtui_scan_char	= VTUI_LIB+23	; .A = char, .X = color
+vtui_hline	= VTUI_LIB+26	; .A = char, .Y = length, .X = color
+vtui_vline	= VTUI_LIB+29	; .A = char, .Y = length, .X = color
+vtui_print_str	= VTUI_LIB+32	; .A=($80=noconvert),r0=ptr,.Y=length,.X=color
+vtui_fill_box	= VTUI_LIB+35	; .A=char,r1l=width,r2l=height,.X=color
+vtui_pet2scr	= VTUI_LIB+38	; .A = char
+vtui_scr2pet	= VTUI_LIB+41	; .A = char
+vtui_border	= VTUI_LIB+44	; .A=bordermode,r1l=width,r2l=height,.X=color
+vtui_save_rect	= VTUI_LIB+47	; .A=dest(0sys,$80vram),.C=VBANK,r0=src,r1l=w,r2l=h
+vtui_rest_rect	= VTUI_LIB+50	; .A=src(0sys,$80vram),.C=VBANK,r0=src,r1l=w,r2l=h
+vtui_input_str	= VTUI_LIB+53	; r0=pointer to buffer, .Y=max length, X=color
+vtui_get_bank	= VTUI_LIB+56	; .C = bank number
+vtui_get_stride	= VTUI_LIB+59	; .A = stride
+vtui_get_decr	= VTUI_LIB+62	; .C = decr value
 
 	jsr	vtui_initialize
 	jmp	VTUI_LIB_END
