@@ -17,8 +17,11 @@ activepathaddr	= foffset+10 ; 2 bytes - VERA BANK will always be 1
 file_variables_end = foffset+12
 
 listdir:
-	.byte	"$=l"
+	.byte	"$"
 LISTDIRLEN	= *-listdir
+llistdir:
+	.byte	"$=l"
+LLISTDIRLEN	= *-llistdir
 curdir:
 	.byte	"$=c"
 CURDIRLEN	= *-curdir
@@ -41,6 +44,28 @@ FILEID2		= $20		; File ID for panel2 dir listing
 PATH1ADDR	= $1EC00
 PATH2ADDR	= $1EE00
 PATHTMP		= $1F9BF
+
+;******************************************************************************
+;******************************************************************************
+;******************************************************************************
+listdirlong:
+	lda	activefileid		; Open command channel
+	ldx	activedev
+	ldy	#0
+	jsr	SETLFS
+	lda	#LLISTDIRLEN
+	ldx	#<llistdir		; $=L
+	ldy	#>llistdir
+	jsr	SETNAM
+	jsr	OPEN
+	bcc	:+			; Exit on error
+	rts
+:	ldx	activefileid
+	jsr	CHKIN
+	jsr	skipheader
+	bcs	@end
+	; list directory
+@end:	jmp	closeerr
 
 ;******************************************************************************
 ; Read characters from an open input stream until a specific character is
@@ -128,7 +153,7 @@ getcurpart:
 ;		r1
 ;		global buffer
 ;******************************************************************************
-getcurdir:.byte $db
+getcurdir:
 	ldx	#<PATHTMP		; Point VERA_DATA1 to PATHTMP address
 	ldy	#>PATHTMP
 	lda	#$19			; Decrement by 1 on VERA_DATA1 access
@@ -221,6 +246,19 @@ getcurdir:.byte $db
 	bra	:-
 
 :	stz	VERA_DATA0		; 0-terminate the path string
+	pla
+
+;******************************************************************************
+; Close the currently opened device and return to caller.
+; Retain error code in .A and set .C if code is anything other than EOF ($40)
+;******************************************************************************
+; INPUT:	.A = potential error code returned from READST
+;		activefileid global variable contains devid to close
+; OUTPUT:	.C set if error code is anything other than EOF (64)
+;		.A = errorcode from READST if .C is set
+;******************************************************************************
+closeerr:
+	pha				; Save possible error code
 	lda	activefileid		; Close device
 	jsr	CLOSE
 	jsr	CLRCHN
@@ -246,9 +284,9 @@ drivepresent:
 				; X is already set to drive ID
 	ldy	#0		; Secondary command ID
 	jsr	SETLFS
-	lda	#LISTDIRLEN
-	ldx	#<listdir
-	ldy	#>listdir
+	lda	#LLISTDIRLEN
+	ldx	#<llistdir
+	ldy	#>llistdir
 	jsr	SETNAM
 	jsr	OPEN		; OPEN sets .C on error
 	bcc	@continue
