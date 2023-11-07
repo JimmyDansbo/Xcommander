@@ -181,8 +181,7 @@ irqwait:
 ; Draw the box around the first panel
 ;******************************************************************************
 drawboxs:
-	lda	#2
-	VTUI_SET_STRIDE
+	VERA_SET_STRIDE 2
 	ldy	#0		; Gotoxy 0, 0
 	lda	#0
 	VTUI_GOTOXY
@@ -215,9 +214,6 @@ drawboxs:
 ; Draw the box around the second panel
 ;******************************************************************************
 drawbox2:
-;	lda	twopanels
-;	bne	:+
-;	rts
 	ldy	#0
 	lda	panel2x
 	VTUI_GOTOXY
