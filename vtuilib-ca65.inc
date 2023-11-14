@@ -39,7 +39,14 @@ VTUI:	.incbin	"VTUI1.0.BIN"
 ; USES:			.A, .X & ,Y
 ; RETURNS:		.C = 1 in case of error.
 ; *****************************************************************************
-.macro VTUI_SCREEN_SET
+.macro VTUI_SCREEN_SET scrmode
+.ifnblank scrmode
+	.if (.match (.left (1, {scrmode}), #))
+		lda	#scrmode
+	.else
+		lda	scrmode
+	.endif	
+.endif
 	jsr	vtui_screen_set
 .endmacro
 
@@ -49,7 +56,14 @@ VTUI:	.incbin	"VTUI1.0.BIN"
 ; INPUTS:	.C = Bank number, 0 or 1
 ; USES:		.A
 ; *****************************************************************************
-.macro VTUI_SET_BANK
+.macro VTUI_SET_BANK bank
+.ifnblank bank
+	.if (.match (.left (1, {bank}), #))
+		lda	#bank
+	.else
+		lda	bank
+	.endif
+.endif	
 	jsr	vtui_set_bank
 .endmacro
 
@@ -69,7 +83,14 @@ VTUI:	.incbin	"VTUI1.0.BIN"
 ; INPUT:		.A = Stride value
 ; USES:			r0l
 ; *****************************************************************************
-.macro VTUI_SET_STRIDE
+.macro VTUI_SET_STRIDE stride
+.ifnblank stride
+	.if (.match (.left (1, {stride}), #))
+		lda	#stride
+	.else
+		lda	stride
+	.endif
+..endif
 	jsr	vtui_set_stride
 .endmacro
 
@@ -88,7 +109,19 @@ VTUI:	.incbin	"VTUI1.0.BIN"
 ; INPUT:		.C (1 = decrement, 0 = increment)
 ; USES:			.A
 ; *****************************************************************************
-.macro VTUI_SET_DECR
+.macro VTUI_SET_DECR decr
+.ifnblank decr
+	.if (.match (.left (1, {decr}), #))
+		.if decr < 1
+			clc
+		.else
+			sec
+		.endif
+	.else
+		lda	decr
+		lsr
+	.endif
+..endif
 	jsr	vtui_set_decr
 .endmacro
 
