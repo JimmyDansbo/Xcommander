@@ -90,7 +90,7 @@ VTUI:	.incbin	"VTUI1.0.BIN"
 	.else
 		lda	stride
 	.endif
-..endif
+.endif
 	jsr	vtui_set_stride
 .endmacro
 
@@ -143,7 +143,21 @@ VTUI:	.incbin	"VTUI1.0.BIN"
 ;		.X = bg-/fg-color
 ; USES:		.A
 ; *****************************************************************************
-.macro VTUI_PLOT_CHAR
+.macro VTUI_PLOT_CHAR ch, col
+.ifnblank ch
+	.if (.match (.left (1, {ch}), #))
+		lda	#ch
+	.else
+		lda	ch
+	.endif
+.endif
+.ifnblank col
+	.if (.match (.left (1, {col}), #))
+		lda	#col
+	.else
+		lda	col
+	.endif
+.endif
 	jsr	vtui_plot_char
 .endmacro
 
@@ -166,7 +180,28 @@ VTUI:	.incbin	"VTUI1.0.BIN"
 ;		.Y	= Length of the line
 ;		.X	= bg- & fg-color
 ; *****************************************************************************
-.macro VTUI_HLINE
+.macro VTUI_HLINE ch, len, col
+.ifnblank ch
+	.if (.match (.left (1, {ch}), #))
+		lda	#ch
+	.else
+		lda	ch
+	.endif
+.endif
+.ifnblank len
+	.if (.match (.left (1, {len}), #))
+		ldy	#len
+	.else
+		ldy	len
+	.endif
+.endif
+.ifnblank col
+	.if (.match (.left (1, {col}), #))
+		ldx	#col
+	.else
+		ldx	col
+	.endif
+.endif
 	jsr	vtui_hline
 .endmacro
 
@@ -178,7 +213,28 @@ VTUI:	.incbin	"VTUI1.0.BIN"
 ;		.X	= bg- & fg-color
 ; USES:		r1h & r2h
 ; *****************************************************************************
-.macro VTUI_VLINE
+.macro VTUI_VLINE ch, hght, col
+.ifnblank ch
+	.if (.match (.left (1, {ch}), #))
+		lda	#ch
+	.else
+		lda	ch
+	.endif
+.endif
+.ifnblank len
+	.if (.match (.left (1, {hght}), #))
+		ldy	#hght
+	.else
+		ldy	hght
+	.endif
+.endif
+.ifnblank col
+	.if (.match (.left (1, {col}), #))
+		ldx	#col
+	.else
+		ldx	col
+	.endif
+.endif
 	jsr	vtui_vline
 .endmacro
 
@@ -188,7 +244,21 @@ VTUI:	.incbin	"VTUI1.0.BIN"
 ; INPUTS:	.A = x coordinate
 ;		.Y = y coordinate
 ; *****************************************************************************
-.macro VTUI_GOTOXY
+.macro VTUI_GOTOXY xcord, ycord
+.ifnblank xcord
+	.if (.match (.left (1, {xcord}), #))
+		lda	#xcord
+	.else
+		lda	xcord
+	.endif
+.endif
+.ifnblank ycord
+	.if (.match (.left (1, {ycord}), #))
+		ldy	#ycord
+	.else
+		ldy	ycord
+	.endif
+.endif
 	jsr	vtui_gotoxy
 .endmacro
 
@@ -198,7 +268,14 @@ VTUI:	.incbin	"VTUI1.0.BIN"
 ; INPUTS:	.A = character to convert
 ; OUTPUS:	.A = converted character or $56 if invalid input
 ; *****************************************************************************
-.macro VTUI_PET2SCR
+.macro VTUI_PET2SCR ch
+.ifnblank ch
+	.if (.match (.left (1, {ch}), #))
+		lda	#ch
+	.else
+		lda	ch
+	.endif
+.endif
 	jsr	vtui_pet2scr
 .endmacro
 
@@ -208,7 +285,14 @@ VTUI:	.incbin	"VTUI1.0.BIN"
 ; INPUTS:	.A = character to convert
 ; OUTPUS:	.A = converted character or $76 if invalid input
 ; *****************************************************************************
-.macro VTUI_SCR2PET
+.macro VTUI_SCR2PET ch
+.ifnblank ch
+	.if (.match (.left (1, {ch}), #))
+		lda	#ch
+	.else
+		lda	ch
+	.endif
+.endif
 	jsr	vtui_scr2pet
 .endmacro
 
@@ -221,7 +305,36 @@ VTUI:	.incbin	"VTUI1.0.BIN"
 ;		.X  = bg-/fg color (only used if stride=0,decr=0&bank=0)
 ; USES:		.A, .Y & r1
 ; *****************************************************************************
-.macro VTUI_PRINT_STR
+.macro VTUI_PRINT_STR str, conv, len, col
+.ifnblank str
+	lda	#<str
+	sta	r0
+	lda	#>str
+	sta	r0+1
+	lda	conv
+.else
+	.ifnblank conv
+		.if (.match (.left (1, {conv}), #))
+			lda	#conv
+		.else
+			lda	conv
+		.endif
+	.endif
+.endif
+.ifnblank len
+	.if (.match (.left (1, {len}), #))
+		ldy	#len
+	.else
+		ldy	len
+	.endif
+.endif
+.ifnblank col
+	.if (.match (.left (1, {col}), #))
+		ldx	#col
+	.else
+		ldx	col
+	.endif
+.endif
 	jsr	vtui_print_str
 .endmacro
 
@@ -232,8 +345,39 @@ VTUI:	.incbin	"VTUI1.0.BIN"
 ;		r1l	= Width of box
 ;		r2l	= Height of box
 ;		.X	= bg- & fg-color
+; USES:		.Y if width and height provided as parameters
 ; *****************************************************************************
-.macro VTUI_FILL_BOX
+.macro VTUI_FILL_BOX ch, width, height, col
+.ifnblank width
+	.if (.match (.left (1, {width}), #))
+		ldy	#width
+	.else
+		ldy	width
+	.endif
+		sty	r1l
+.endif
+.ifnblank height
+	.if (.match (.left (1, {height}), #))
+		ldy	#height
+	.else
+		ldy	height
+	.endif
+		sty	r2l
+.endif
+.ifnblank ch
+	.if (.match (.left (1, {ch}), #))
+		lda	#ch
+	.else
+		lda	ch
+	.endif
+.endif
+.ifnblank col
+	.if (.match (.left (1, {col}), #))
+		ldx	#col
+	.else
+		ldx	col
+	.endif
+.endif
 	jsr	vtui_fill_box
 .endmacro
 
@@ -244,7 +388,21 @@ VTUI:	.incbin	"VTUI1.0.BIN"
 ;		.X	= bg- & fg-color
 ; USES:		.Y, r1l & r2l
 ; *****************************************************************************
-.macro VTUI_CLR_SCR
+.macro VTUI_CLR_SCR ch, col
+.ifnblank ch
+	.if (.match (.left (1, {ch}), #))
+		lda	#ch
+	.else
+		lda	ch
+	.endif
+.endif
+.ifnblank col
+	.if (.match (.left (1, {col}), #))
+		ldx	#col
+	.else
+		ldx	col
+	.endif
+.endif
 	jsr	vtui_clr_scr
 .endmacro
 
@@ -257,7 +415,37 @@ VTUI:	.incbin	"VTUI1.0.BIN"
 ;		.X	= bg-/fg-color
 ; USES		.Y, r0, r1h & r2h
 ; *****************************************************************************
-.macro VTUI_BORDER
+.macro VTUI_BORDER mode, width, height, col
+.ifnblank width
+	.if (.match (.left (1, {width}), #))
+		ldy	#width
+	.else
+		ldy	width
+	.endif
+		sty	r1l
+.endif
+.ifnblank height
+	.if (.match (.left (1, {height}), #))
+		ldy	#height
+	.else
+		ldy	height
+	.endif
+		sty	r2l
+.endif
+.ifnblank mode
+	.if (.match (.left (1, {mode}), #))
+		lda	#mode
+	.else
+		lda	mode
+	.endif
+.endif
+.ifnblank col
+	.if (.match (.left (1, {col}), #))
+		ldx	#col
+	.else
+		ldx	col
+	.endif
+.endif
 	jsr	vtui_border
 .endmacro
 
@@ -272,7 +460,40 @@ VTUI:	.incbin	"VTUI1.0.BIN"
 ;		r2l	= height
 ; USES:		r1h
 ; *****************************************************************************
-.macro VTUI_SAVE_RECT
+.macro VTUI_SAVE_RECT addr, width, height, bank
+.ifnblank addr
+	lda	#<addr
+	sta	r0
+	lda	#>addr
+	sta	r0+1
+.endif
+.ifnblank bank
+	.if (.match (.left (1, {bank}), #))
+		lda	#bank
+	.else
+		lda	bank
+	.endif
+	lsr
+	lda	#$80
+.else
+	lda	#$00
+.endif
+.ifnblank width
+	.if (.match (.left (1, {width}), #))
+		ldy	#width
+	.else
+		ldy	width
+	.endif
+		sty	r1l
+.endif
+.ifnblank height
+	.if (.match (.left (1, {height}), #))
+		ldy	#height
+	.else
+		ldy	height
+	.endif
+		sty	r2l
+.endif
 	jsr	vtui_save_rect
 .endmacro
 
@@ -286,7 +507,40 @@ VTUI:	.incbin	"VTUI1.0.BIN"
 ;		r1l	= width
 ;		r2l	= height
 ; *****************************************************************************
-.macro VTUI_REST_RECT
+.macro VTUI_REST_RECT addr, width, height, bank
+.ifnblank addr
+	lda	#<addr
+	sta	r0
+	lda	#>addr
+	sta	r0+1
+.endif
+.ifnblank bank
+	.if (.match (.left (1, {bank}), #))
+		lda	#bank
+	.else
+		lda	bank
+	.endif
+	lsr
+	lda	#$80
+.else
+	lda	#$00
+.endif
+.ifnblank width
+	.if (.match (.left (1, {width}), #))
+		ldy	#width
+	.else
+		ldy	width
+	.endif
+		sty	r1l
+.endif
+.ifnblank height
+	.if (.match (.left (1, {height}), #))
+		ldy	#height
+	.else
+		ldy	height
+	.endif
+		sty	r2l
+.endif
 	jsr	vtui_rest_rect
 .endmacro
 
@@ -299,7 +553,27 @@ VTUI:	.incbin	"VTUI1.0.BIN"
 ; OUPUTS:	.Y = actual length of input
 ; USES:		.A & r1
 ; *****************************************************************************
-.macro VTUI_INPUT_STR
+.macro VTUI_INPUT_STR buf, len, col
+.ifnblank buf
+	lda	#<buf
+	sta	r0
+	lda	#>buf
+	sta	r0+1
+.endif
+.ifnblank len
+	.if (.match (.left (1, {len}), #))
+		ldy	#len
+	.else
+		ldy	len
+	.endif
+.endif
+.ifnblank col
+	.if (.match (.left (1, {col}), #))
+		ldx	#col
+	.else
+		ldx	col
+	.endif
+.endif
 	jsr	vtui_input_str
 .endmacro
 
